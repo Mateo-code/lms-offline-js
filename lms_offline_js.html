@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>LMS Offline JS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Bootstrap solo para estilos (usa CDN) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f5f5f5; }
+    .card-small { box-shadow: 0 2px 4px rgba(0,0,0,0.06); border-radius: 0.75rem; }
+    textarea { resize: vertical; }
+  </style>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+      <span class="navbar-brand mb-0 h1">LMS Offline JS</span>
+      <div id="userInfo" class="text-light small" style="display:none;">
+        <span id="userLabel"></span>
+        <button id="resetDataBtn" class="btn btn-outline-light btn-sm ms-2">Reiniciar datos</button>
+        <button id="logoutBtn" class="btn btn-outline-light btn-sm ms-2">Cerrar sesión</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- LOGIN -->
+  <div class="container my-4" id="loginView">
+    <div class="row justify-content-center">
+      <div class="col-md-5">
+        <div class="card card-small">
+          <div class="card-body">
+            <h4 class="mb-3 text-center">Iniciar sesión</h4>
+            <form id="loginForm">
+              <div class="mb-3">
+                <label for="loginUser" class="form-label">Usuario</label>
+                <input type="text" id="loginUser" class="form-control" required autocomplete="username">
+              </div>
+              <div class="mb-3">
+                <label for="loginPass" class="form-label">Contraseña</label>
+                <input type="password" id="loginPass" class="form-control" required autocomplete="current-password">
+              </div>
+              <button type="submit" class="btn btn-primary w-100">Entrar</button>
+            </form>
+            <hr>
+            <p class="text-muted small mb-1">Docente demo: <strong>docente / 1234</strong></p>
+            <p class="text-muted small">Estudiante demo: <strong>estudiante1 / 1234</strong></p>
+            <div id="loginError" class="alert alert-danger mt-3 d-none small"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="container-fluid my-3" id="appView" style="display:none;">
+    <div id="flashMsg" class="alert d-none" role="alert"></div>
+
+    <!-- PANEL DOCENTE -->
+    <div id="teacherView" style="display:none;">
+      <h2 class="mt-2 mb-3">Panel docente</h2>
+
+      <!-- DASHBOARD -->
+      <div class="row mb-3" id="teacherDashboard">
+        <div class="col-md-3 col-sm-6 mb-2">
+          <div class="card card-small">
+            <div class="card-body">
+              <h6 class="text-muted">Mis cursos</h6>
+              <h3 id="dashCourses" class="mb-0">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-2">
+          <div class="card card-small">
+            <div class="card-body">
+              <h6 class="text-muted">Estudiantes distintos</h6>
+              <h3 id="dashStudents" class="mb-0">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-2">
+          <div class="card card-small">
+            <div class="card-body">
+              <h6 class="text-muted">Actividades</h6>
+              <h3 id="dashActivities" class="mb-0">0</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-2">
+          <div class="card card-small">
+            <div class="card-body">
+              <h6 class="text-muted">Respuestas recibidas</h6>
+              <h3 id="dashSubmissions" class="mb-0">0</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- GESTIÓN DE CURSOS -->
+      <h4>Cursos</h4>
+      <div class="row">
+        <div class="col-md-7">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Curso</th>
+                  <th>Descripción</th>
+                  <th>Actividades</th>
+                  <th>Estudiantes</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="teacherCoursesBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card card-small">
+            <div class="card-body">
+              <h5 id="courseFormTitle" class="card-title mb-3">Crear / editar curso</h5>
+              <form id="courseForm">
+                <input type="hidden" id="courseId">
+                <div class="mb-2">
+                  <label for="courseName" class="form-label">Nombre del curso</label>
+                  <input type="text" id="courseName" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                  <label for="courseDescription" class="form-label">Descripción</label>
+                  <textarea id="courseDescription" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <button type="button" id="courseFormResetBtn" class="btn btn-secondary btn-sm">Nuevo</button>
+                  <button type="submit" class="btn btn-success btn-sm">Guardar curso</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- ACTIVIDADES -->
+      <h4 id="activitiesSectionTitle">Actividades del curso seleccionado</h4>
+      <p class="text-muted" id="activitiesCourseHint">Selecciona un curso y haz clic en "Actividades" para gestionarlas.</p>
+      <div class="row">
+        <div class="col-md-7">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Título</th>
+                  <th>Descripción</th>
+                  <th>Respuestas</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="activitiesBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card card-small">
+            <div class="card-body">
+              <h5 id="activityFormTitle" class="card-title mb-3">Crear / editar actividad</h5>
+              <form id="activityForm">
+                <input type="hidden" id="activityId">
+                <div class="mb-2">
+                  <label for="activityTitle" class="form-label">Título</label>
+                  <input type="text" id="activityTitle" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                  <label for="activityDescription" class="form-label">Descripción / enunciado</label>
+                  <textarea id="activityDescription" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <button type="button" id="activityFormResetBtn" class="btn btn-secondary btn-sm">Nuevo</button>
+                  <button type="submit" class="btn btn-success btn-sm" id="activitySaveBtn" disabled>Guardar actividad</button>
+                </div>
+                <small class="text-muted d-block mt-1">Primero selecciona un curso y luego crea o edita actividades.</small>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- MATRÍCULAS -->
+      <h4 id="enrollmentsSectionTitle">Matrículas del curso seleccionado</h4>
+      <p class="text-muted" id="enrollmentsCourseHint">Selecciona un curso y haz clic en "Matrículas" para administrar estudiantes.</p>
+      <div class="row">
+        <div class="col-md-7">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Estudiante</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="enrollmentsBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card card-small mb-3">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Agregar estudiante al curso</h5>
+              <form id="addEnrollmentForm">
+                <div class="mb-2">
+                  <label for="studentSelect" class="form-label">Seleccionar estudiante</label>
+                  <select id="studentSelect" class="form-select" required>
+                    <option value="">Selecciona un estudiante…</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm" id="enrollBtn" disabled>Matricular</button>
+              </form>
+            </div>
+          </div>
+          <div class="card card-small">
+            <div class="card-body">
+              <h5 class="card-title mb-3">Crear nuevo estudiante</h5>
+              <form id="addStudentForm">
+                <div class="mb-2">
+                  <label for="newStudentUser" class="form-label">Usuario</label>
+                  <input type="text" id="newStudentUser" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                  <label for="newStudentPass" class="form-label">Contraseña</label>
+                  <input type="password" id="newStudentPass" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-outline-success btn-sm">Crear estudiante</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- RESPUESTAS -->
+      <h4 id="submissionsSectionTitle">Respuestas de estudiantes del curso seleccionado</h4>
+      <p class="text-muted" id="submissionsCourseHint">Selecciona un curso y haz clic en "Respuestas" para ver el detalle.</p>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Estudiante</th>
+              <th>Actividad</th>
+              <th>Respuesta</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="submissionsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL ESTUDIANTE -->
+    <div id="studentView" style="display:none;">
+      <h2 class="mt-2 mb-3">Panel estudiante</h2>
+
+      <h4>Mis cursos</h4>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Curso</th>
+              <th>Descripción</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="studentCoursesBody"></tbody>
+        </table>
+      </div>
+
+      <hr>
+
+      <h4 id="studentActivitiesTitle">Actividades del curso</h4>
+      <p class="text-muted" id="studentActivitiesHint">Selecciona un curso para ver y responder las actividades.</p>
+      <div id="studentActivitiesContainer"></div>
+    </div>
+  </div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'offlineLMSData_v2';
+
+const defaultData = {
+  users: [
+    { id: 1, username: 'docente', password: '1234', role: 'docente' },
+    { id: 2, username: 'estudiante1', password: '1234', role: 'estudiante' }
+  ],
+  courses: [
+    { id: 1, name: 'Matemáticas 7°', description: 'Curso de prueba de la institución', teacherId: 1 }
+  ],
+  enrollments: [
+    { id: 1, courseId: 1, studentId: 2 }
+  ],
+  activities: [
+    { id: 1, courseId: 1, title: 'Actividad inicial', description: 'Describe una situación de tu entorno donde notes problemas de conectividad o acceso a la tecnología.', createdAt: new Date().toISOString() }
+  ],
+  submissions: []
+};
+
+let data = null;
+let currentUser = null;
+let currentCourseId = null;
+let currentCourseForEnrollments = null;
+let currentCourseForSubmissions = null;
+
+function cloneDefaultData() {
+  return JSON.parse(JSON.stringify(defaultData));
+}
+
+function loadData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    const cloned = cloneDefaultData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloned));
+    return cloned;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Error leyendo storage, reseteando...', e);
+    const cloned = cloneDefaultData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloned));
+    return cloned;
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function showFlash(message, type = 'success') {
+  const box = document.getElementById('flashMsg');
+  box.textContent = message;
+  box.className = 'alert alert-' + type;
+  box.classList.remove('d-none');
+  setTimeout(() => box.classList.add('d-none'), 3000);
+}
+
+function showLoginError(msg) {
+  const box = document.getElementById('loginError');
+  box.textContent = msg;
+  box.classList.remove('d-none');
+}
+
+function clearLoginError() {
+  const box = document.getElementById('loginError');
+  box.classList.add('d-none');
+  box.textContent = '';
+}
+
+function nextId(collection) {
+  if (!collection || collection.length === 0) return 1;
+  return Math.max.apply(null, collection.map(item => item.id)) + 1;
+}
+
+function getTeacherCourses() {
+  return data.courses.filter(c => c.teacherId === currentUser.id);
+}
+function getCourseById(id) { return data.courses.find(c => c.id === id); }
+function getActivityById(id) { return data.activities.find(a => a.id === id); }
+function getUserById(id)     { return data.users.find(u => u.id === id); }
+function getActivitiesForCourse(courseId)   { return data.activities.filter(a => a.courseId === courseId); }
+function getEnrollmentsForCourse(courseId)  { return data.enrollments.filter(e => e.courseId === courseId); }
+function getSubmissionsForCourse(courseId) {
+  const activities = getActivitiesForCourse(courseId).map(a => a.id);
+  return data.submissions.filter(s => activities.includes(s.activityId));
+}
+
+/* --------- RENDER DOCENTE --------- */
+
+function renderTeacherDashboard() {
+  const courses = getTeacherCourses();
+  const courseIds = courses.map(c => c.id);
+  const activities = data.activities.filter(a => courseIds.includes(a.courseId));
+  const enrollments = data.enrollments.filter(e => courseIds.includes(e.courseId));
+  const submissions = data.submissions.filter(s => {
+    const act = getActivityById(s.activityId);
+    return act && courseIds.includes(act.courseId);
+  });
+  const studentIds = Array.from(new Set(enrollments.map(e => e.studentId)));
+
+  document.getElementById('dashCourses').textContent = courses.length;
+  document.getElementById('dashStudents').textContent = studentIds.length;
+  document.getElementById('dashActivities').textContent = activities.length;
+  document.getElementById('dashSubmissions').textContent = submissions.length;
+}
+
+function renderCoursesTable() {
+  const tbody = document.getElementById('teacherCoursesBody');
+  const courses = getTeacherCourses();
+  if (courses.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted">Aún no tienes cursos creados.</td></tr>';
+    return;
+  }
+  let html = '';
+  courses.forEach(c => {
+    const acts = getActivitiesForCourse(c.id).length;
+    const students = getEnrollmentsForCourse(c.id).length;
+    html += `
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.description || ''}</td>
+        <td>${acts}</td>
+        <td>${students}</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" data-action="activities" data-id="${c.id}">Actividades</button>
+            <button class="btn btn-outline-secondary" data-action="enrollments" data-id="${c.id}">Matrículas</button>
+            <button class="btn btn-outline-info" data-action="submissions" data-id="${c.id}">Respuestas</button>
+            <button class="btn btn-outline-success" data-action="editCourse" data-id="${c.id}">Editar</button>
+            <button class="btn btn-outline-danger" data-action="deleteCourse" data-id="${c.id}">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function resetCourseForm() {
+  document.getElementById('courseId').value = '';
+  document.getElementById('courseName').value = '';
+  document.getElementById('courseDescription').value = '';
+  document.getElementById('courseFormTitle').textContent = 'Crear / editar curso';
+}
+
+function loadCourseIntoForm(id) {
+  const course = getCourseById(id);
+  if (!course) return;
+  document.getElementById('courseId').value = course.id;
+  document.getElementById('courseName').value = course.name;
+  document.getElementById('courseDescription').value = course.description || '';
+  document.getElementById('courseFormTitle').textContent = 'Editar curso';
+}
+
+function renderActivitiesSection() {
+  const title = document.getElementById('activitiesSectionTitle');
+  const hint = document.getElementById('activitiesCourseHint');
+  const saveBtn = document.getElementById('activitySaveBtn');
+  const course = currentCourseId ? getCourseById(currentCourseId) : null;
+
+  if (!course) {
+    title.textContent = 'Actividades del curso seleccionado';
+    hint.textContent = 'Selecciona un curso y haz clic en "Actividades" para gestionarlas.';
+    document.getElementById('activitiesBody').innerHTML = '';
+    saveBtn.disabled = true;
+    return;
+  }
+  title.textContent = 'Actividades de: ' + course.name;
+  hint.textContent = '';
+  saveBtn.disabled = false;
+
+  const tbody = document.getElementById('activitiesBody');
+  const activities = getActivitiesForCourse(currentCourseId);
+  if (activities.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Este curso aún no tiene actividades.</td></tr>';
+    return;
+  }
+  let html = '';
+  activities.forEach(a => {
+    const countSub = data.submissions.filter(s => s.activityId === a.id).length;
+    html += `
+      <tr>
+        <td>${a.title}</td>
+        <td>${a.description || ''}</td>
+        <td>${countSub}</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-success" data-action="editActivity" data-id="${a.id}">Editar</button>
+            <button class="btn btn-outline-danger" data-action="deleteActivity" data-id="${a.id}">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function resetActivityForm() {
+  document.getElementById('activityId').value = '';
+  document.getElementById('activityTitle').value = '';
+  document.getElementById('activityDescription').value = '';
+  document.getElementById('activityFormTitle').textContent = 'Crear / editar actividad';
+}
+
+function loadActivityIntoForm(id) {
+  const act = getActivityById(id);
+  if (!act) return;
+  document.getElementById('activityId').value = act.id;
+  document.getElementById('activityTitle').value = act.title;
+  document.getElementById('activityDescription').value = act.description || '';
+  document.getElementById('activityFormTitle').textContent = 'Editar actividad';
+}
+
+function renderEnrollmentsSection() {
+  const title = document.getElementById('enrollmentsSectionTitle');
+  const hint = document.getElementById('enrollmentsCourseHint');
+  const enrollBtn = document.getElementById('enrollBtn');
+  const course = currentCourseForEnrollments ? getCourseById(currentCourseForEnrollments) : null;
+  const tbody = document.getElementById('enrollmentsBody');
+  const select = document.getElementById('studentSelect');
+
+  if (!course) {
+    title.textContent = 'Matrículas del curso seleccionado';
+    hint.textContent = 'Selecciona un curso y haz clic en "Matrículas" para administrar estudiantes.';
+    tbody.innerHTML = '';
+    select.innerHTML = '<option value="">Selecciona un estudiante…</option>';
+    enrollBtn.disabled = true;
+    return;
+  }
+
+  title.textContent = 'Matrículas de: ' + course.name;
+  hint.textContent = '';
+  enrollBtn.disabled = false;
+
+  const enrollments = getEnrollmentsForCourse(currentCourseForEnrollments);
+  if (enrollments.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2" class="text-muted">Este curso aún no tiene estudiantes matriculados.</td></tr>';
+  } else {
+    let html = '';
+    enrollments.forEach(e => {
+      const stu = getUserById(e.studentId);
+      html += `
+        <tr>
+          <td>${stu ? stu.username : 'Desconocido'}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" data-action="removeEnrollment" data-id="${e.id}">
+              Quitar del curso
+            </button>
+          </td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+  }
+
+  // Llenar select con estudiantes NO matriculados en este curso
+  const enrolledIds = enrollments.map(e => e.studentId);
+  const students = data.users.filter(u => u.role === 'estudiante');
+  let options = '<option value="">Selecciona un estudiante…</option>';
+  students.filter(s => !enrolledIds.includes(s.id)).forEach(s => {
+    options += `<option value="${s.id}">${s.username}</option>`;
+  });
+  if (options === '<option value="">Selecciona un estudiante…</option>') {
+    options += '<option value="" disabled>No hay estudiantes disponibles</option>';
+    enrollBtn.disabled = true;
+  }
+  select.innerHTML = options;
+}
+
+function renderSubmissionsSection() {
+  const title = document.getElementById('submissionsSectionTitle');
+  const hint = document.getElementById('submissionsCourseHint');
+  const tbody = document.getElementById('submissionsBody');
+  const course = currentCourseForSubmissions ? getCourseById(currentCourseForSubmissions) : null;
+
+  if (!course) {
+    title.textContent = 'Respuestas de estudiantes del curso seleccionado';
+    hint.textContent = 'Selecciona un curso y haz clic en "Respuestas" para ver el detalle.';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  title.textContent = 'Respuestas de estudiantes - ' + course.name;
+  hint.textContent = '';
+
+  const submissions = getSubmissionsForCourse(currentCourseForSubmissions);
+  if (submissions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted">Todavía no hay respuestas registradas para este curso.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  submissions.forEach(s => {
+    const stu = getUserById(s.studentId);
+    const act = getActivityById(s.activityId);
+    html += `
+      <tr>
+        <td>${stu ? stu.username : 'Desconocido'}</td>
+        <td>${act ? act.title : 'Actividad eliminada'}</td>
+        <td style="white-space: pre-wrap; max-width: 400px;">${s.answer}</td>
+        <td>${new Date(s.createdAt).toLocaleString()}</td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+/* --------- RENDER ESTUDIANTE --------- */
+
+function renderStudentCourses() {
+  const tbody = document.getElementById('studentCoursesBody');
+  const enrollments = data.enrollments.filter(e => e.studentId === currentUser.id);
+  if (enrollments.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="text-muted">Aún no estás matriculado en ningún curso.</td></tr>';
+    document.getElementById('studentActivitiesContainer').innerHTML = '';
+    document.getElementById('studentActivitiesHint').textContent = 'Cuando tengas cursos matriculados, aquí verás sus actividades.';
+    return;
+  }
+
+  let html = '';
+  enrollments.forEach(e => {
+    const course = getCourseById(e.courseId);
+    if (!course) return;
+    html += `
+      <tr>
+        <td>${course.name}</td>
+        <td>${course.description || ''}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary" data-action="viewActivities" data-id="${course.id}">
+            Ver actividades
+          </button>
+        </td>
+      </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderStudentActivities(courseId) {
+  const course = getCourseById(courseId);
+  const container = document.getElementById('studentActivitiesContainer');
+  const hint = document.getElementById('studentActivitiesHint');
+  if (!course) {
+    container.innerHTML = '';
+    hint.textContent = 'Selecciona un curso para ver y responder las actividades.';
+    return;
+  }
+
+  const activities = getActivitiesForCourse(courseId);
+  document.getElementById('studentActivitiesTitle').textContent = 'Actividades de: ' + course.name;
+
+  if (activities.length === 0) {
+    container.innerHTML = '<p class="text-muted">Este curso aún no tiene actividades asignadas.</p>';
+    hint.textContent = '';
+    return;
+  }
+
+  let html = '';
+  activities.forEach(a => {
+    const existing = data.submissions.find(s => s.activityId === a.id && s.studentId === currentUser.id);
+    const lastAnswer = existing ? existing.answer : '';
+    const lastDate = existing ? new Date(existing.createdAt).toLocaleString() : null;
+
+    html += `
+      <div class="card card-small mb-3">
+        <div class="card-body">
+          <h5 class="card-title mb-1">${a.title}</h5>
+          <p class="text-muted">${a.description || ''}</p>
+          ${lastDate ? `<p class="small text-success mb-1">Última respuesta enviada: ${lastDate}</p>` : ''}
+          <form class="student-activity-form" data-activity-id="${a.id}">
+            <div class="mb-2">
+              <label class="form-label">Tu respuesta</label>
+              <textarea class="form-control" rows="3" required>${lastAnswer}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Guardar respuesta</button>
+            <small class="text-muted ms-2">La información se guarda localmente en este navegador.</small>
+          </form>
+        </div>
+      </div>`;
+  });
+  container.innerHTML = html;
+  hint.textContent = '';
+}
+
+/* --------- VISTAS --------- */
+
+function showLoginView() {
+  document.getElementById('loginView').style.display = 'block';
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('userInfo').style.display = 'none';
+}
+
+function showAppView() {
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+  document.getElementById('userInfo').style.display = 'block';
+  document.getElementById('userLabel').textContent = currentUser.username + ' (' + currentUser.role + ')';
+
+  if (currentUser.role === 'docente') {
+    document.getElementById('teacherView').style.display = 'block';
+    document.getElementById('studentView').style.display = 'none';
+    renderTeacherDashboard();
+    renderCoursesTable();
+    renderActivitiesSection();
+    renderEnrollmentsSection();
+    renderSubmissionsSection();
+  } else {
+    document.getElementById('teacherView').style.display = 'none';
+    document.getElementById('studentView').style.display = 'block';
+    renderStudentCourses();
+    renderStudentActivities(null);
+  }
+}
+
+function resetAllStateButKeepData() {
+  currentCourseId = null;
+  currentCourseForEnrollments = null;
+  currentCourseForSubmissions = null;
+  resetCourseForm();
+  resetActivityForm();
+}
+
+/* --------- EVENTOS --------- */
+
+document.addEventListener('DOMContentLoaded', function() {
+  data = loadData();
+
+  const savedUser = sessionStorage.getItem('offlineLMSCurrentUser');
+  if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+    showAppView();
+  } else {
+    showLoginView();
+  }
+
+  // Login
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearLoginError();
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
+    const found = data.users.find(u => u.username === user && u.password === pass);
+    if (!found) {
+      showLoginError('Usuario o contraseña incorrectos.');
+      return;
+    }
+    currentUser = { id: found.id, username: found.username, role: found.role };
+    sessionStorage.setItem('offlineLMSCurrentUser', JSON.stringify(currentUser));
+    resetAllStateButKeepData();
+    showAppView();
+  });
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    currentUser = null;
+    sessionStorage.removeItem('offlineLMSCurrentUser');
+    resetAllStateButKeepData();
+    showLoginView();
+  });
+
+  // Reiniciar base local
+  document.getElementById('resetDataBtn').addEventListener('click', function() {
+    if (!confirm('Esto borrará todos los cursos, actividades y respuestas guardadas en este navegador. ¿Continuar?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    data = loadData();
+    resetAllStateButKeepData();
+    if (currentUser) {
+      const userInData = data.users.find(u => u.username === currentUser.username && u.role === currentUser.role);
+      if (userInData) currentUser.id = userInData.id;
+    }
+    if (currentUser) showAppView(); else showLoginView();
+    showFlash('Base de datos local reiniciada.', 'info');
+  });
+
+  // Crear / editar curso
+  document.getElementById('courseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('courseName').value.trim();
+    const desc = document.getElementById('courseDescription').value.trim();
+    if (!name) return;
+    const idValue = document.getElementById('courseId').value;
+
+    if (idValue) {
+      const id = parseInt(idValue, 10);
+      const course = getCourseById(id);
+      if (course) {
+        course.name = name;
+        course.description = desc;
+        saveData();
+        showFlash('Curso actualizado correctamente.');
+        renderCoursesTable();
+      }
+    } else {
+      const newCourse = { id: nextId(data.courses), name, description: desc, teacherId: currentUser.id };
+      data.courses.push(newCourse);
+      saveData();
+      showFlash('Curso creado correctamente.');
+      renderCoursesTable();
+    }
+    resetCourseForm();
+  });
+
+  document.getElementById('courseFormResetBtn').addEventListener('click', resetCourseForm);
+
+  // Acciones en tabla de cursos
+  document.getElementById('teacherCoursesBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = parseInt(btn.getAttribute('data-id'), 10);
+
+    if (action === 'activities') {
+      currentCourseId = id;
+      renderActivitiesSection();
+      showFlash('Curso seleccionado para gestionar actividades.', 'info');
+    } else if (action === 'enrollments') {
+      currentCourseForEnrollments = id;
+      renderEnrollmentsSection();
+      showFlash('Curso seleccionado para administrar matrículas.', 'info');
+    } else if (action === 'submissions') {
+      currentCourseForSubmissions = id;
+      renderSubmissionsSection();
+      showFlash('Curso seleccionado para revisar respuestas.', 'info');
+    } else if (action === 'editCourse') {
+      loadCourseIntoForm(id);
+    } else if (action === 'deleteCourse') {
+      const course = getCourseById(id);
+      if (!course) return;
+      if (!confirm('¿Eliminar el curso "' + course.name + '" y todo su contenido?')) return;
+      // Borrar todo lo relacionado
+      data.submissions = data.submissions.filter(s => {
+        const act = getActivityById(s.activityId);
+        return !(act && act.courseId === id);
+      });
+      data.activities = data.activities.filter(a => a.courseId !== id);
+      data.enrollments = data.enrollments.filter(e => e.courseId !== id);
+      data.courses = data.courses.filter(c => c.id !== id);
+      saveData();
+      if (currentCourseId === id) currentCourseId = null;
+      if (currentCourseForEnrollments === id) currentCourseForEnrollments = null;
+      if (currentCourseForSubmissions === id) currentCourseForSubmissions = null;
+      resetActivityForm();
+      renderTeacherDashboard();
+      renderCoursesTable();
+      renderActivitiesSection();
+      renderEnrollmentsSection();
+      renderSubmissionsSection();
+      showFlash('Curso eliminado correctamente.', 'info');
+    }
+  });
+
+  // Crear / editar actividad
+  document.getElementById('activityForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!currentCourseId) {
+      alert('Primero selecciona un curso en la tabla de cursos.');
+      return;
+    }
+    const title = document.getElementById('activityTitle').value.trim();
+    const desc = document.getElementById('activityDescription').value.trim();
+    if (!title) return;
+    const idValue = document.getElementById('activityId').value;
+
+    if (idValue) {
+      const id = parseInt(idValue, 10);
+      const act = getActivityById(id);
+      if (act) {
+        act.title = title;
+        act.description = desc;
+        saveData();
+        showFlash('Actividad actualizado correctamente.');
+        renderActivitiesSection();
+      }
+    } else {
+      const newAct = {
+        id: nextId(data.activities),
+        courseId: currentCourseId,
+        title,
+        description: desc,
+        createdAt: new Date().toISOString()
+      };
+      data.activities.push(newAct);
+      saveData();
+      showFlash('Actividad creada correctamente.');
+      renderActivitiesSection();
+    }
+    resetActivityForm();
+  });
+
+  document.getElementById('activityFormResetBtn').addEventListener('click', resetActivityForm);
+
+  document.getElementById('activitiesBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = parseInt(btn.getAttribute('data-id'), 10);
+    if (action === 'editActivity') {
+      loadActivityIntoForm(id);
+    } else if (action === 'deleteActivity') {
+      const act = getActivityById(id);
+      if (!act) return;
+      if (!confirm('¿Eliminar la actividad "' + act.title + '" y todas sus respuestas?')) return;
+      data.submissions = data.submissions.filter(s => s.activityId !== id);
+      data.activities = data.activities.filter(a => a.id !== id);
+      saveData();
+      resetActivityForm();
+      renderActivitiesSection();
+      renderSubmissionsSection();
+      showFlash('Actividad eliminada correctamente.', 'info');
+    }
+  });
+
+  // Quitar matrícula
+  document.getElementById('enrollmentsBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = parseInt(btn.getAttribute('data-id'), 10);
+    if (action === 'removeEnrollment') {
+      const enrollment = data.enrollments.find(en => en.id === id);
+      if (!enrollment) return;
+      const stu = getUserById(enrollment.studentId);
+      if (!confirm('¿Quitar al estudiante "' + (stu ? stu.username : '') + '" de este curso?')) return;
+      data.enrollments = data.enrollments.filter(en => en.id !== id);
+      saveData();
+      renderEnrollmentsSection();
+      if (currentUser && currentUser.role === 'estudiante') renderStudentCourses();
+      showFlash('Estudiante retirado del curso.', 'info');
+    }
+  });
+
+  // Agregar matrícula
+  document.getElementById('addEnrollmentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (!currentCourseForEnrollments) {
+      alert('Primero selecciona un curso en la tabla de cursos (botón "Matrículas").');
+      return;
+    }
+    const select = document.getElementById('studentSelect');
+    const value = select.value;
+    if (!value) return;
+    const studentId = parseInt(value, 10);
+    const exists = data.enrollments.some(en => en.courseId === currentCourseForEnrollments && en.studentId === studentId);
+    if (exists) {
+      showFlash('El estudiante ya está matriculado en este curso.', 'warning');
+      return;
+    }
+    const newEnroll = { id: nextId(data.enrollments), courseId: currentCourseForEnrollments, studentId };
+    data.enrollments.push(newEnroll);
+    saveData();
+    renderEnrollmentsSection();
+    if (currentUser && currentUser.role === 'estudiante') renderStudentCourses();
+    showFlash('Estudiante matriculado correctamente.');
+  });
+
+  // Crear nuevo estudiante
+  document.getElementById('addStudentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const user = document.getElementById('newStudentUser').value.trim();
+    const pass = document.getElementById('newStudentPass').value.trim();
+    if (!user || !pass) return;
+    const exists = data.users.some(u => u.username === user);
+    if (exists) {
+      alert('Ya existe un usuario con ese nombre.');
+      return;
+    }
+    const newUser = { id: nextId(data.users), username: user, password: pass, role: 'estudiante' };
+    data.users.push(newUser);
+    saveData();
+    document.getElementById('newStudentUser').value = '';
+    document.getElementById('newStudentPass').value = '';
+    renderEnrollmentsSection();
+    showFlash('Estudiante creado correctamente.');
+  });
+
+  // Estudiante: seleccionar curso
+  document.getElementById('studentCoursesBody').addEventListener('click', function(e) {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = parseInt(btn.getAttribute('data-id'), 10);
+    if (action === 'viewActivities') {
+      renderStudentActivities(id);
+    }
+  });
+
+  // Estudiante: enviar respuesta
+  document.getElementById('studentActivitiesContainer').addEventListener('submit', function(e) {
+    if (!e.target.classList.contains('student-activity-form')) return;
+    e.preventDefault();
+    const form = e.target;
+    const activityId = parseInt(form.getAttribute('data-activity-id'), 10);
+    const textarea = form.querySelector('textarea');
+    const answer = textarea.value.trim();
+    if (!answer) {
+      alert('La respuesta no puede estar vacía.');
+      return;
+    }
+    let submission = data.submissions.find(s => s.activityId === activityId && s.studentId === currentUser.id);
+    if (submission) {
+      submission.answer = answer;
+      submission.createdAt = new Date().toISOString();
+    } else {
+      submission = {
+        id: nextId(data.submissions),
+        activityId,
+        studentId: currentUser.id,
+        answer,
+        createdAt: new Date().toISOString()
+      };
+      data.submissions.push(submission);
+    }
+    saveData();
+    showFlash('Respuesta guardada localmente.');
+    const act = getActivityById(activityId);
+    if (act) renderStudentActivities(act.courseId);
+    if (currentUser.role === 'docente') renderSubmissionsSection();
+  });
+});
+</script>
+</body>
+</html>
